@@ -1,164 +1,281 @@
-Fake News Detector
-A simple Machine Learning + NLP based web application that helps analyze whether a news article looks more like fake or real news.
-The main idea behind this project is not just to classify an article using its words. The system also checks whether the headline actually matches the article body and whether the headline shows common clickbait patterns.
-I built this project to understand how different NLP techniques can work together in a practical application.
+# Fake News Detector
 
-What does this project do?
+An AI-powered web application that analyzes news headlines and article bodies to identify potentially fake or misleading content.
 
-The application takes two inputs:
-A news headline and the article body ,It then performs three main types of analysis:
--Fake/Real Prediction – a hybrid ML model predicts whether the article is more associated with fake or real news.
--Headline–Body Analysis – compares the headline and article body using both word-level and meaning-level similarity.
--Clickbait Detection – checks the headline for sensational wording, excessive punctuation, capitalization, and curiosity-gap phrases.
-The results are displayed through an interactive Gradio web interface.
+The project combines **Machine Learning, NLP, TF-IDF similarity, semantic similarity, and rule-based clickbait detection** to provide multiple signals instead of relying on a single prediction.
+
+> **Note:** This project is designed as an analytical tool and is not a fact-checking system.
+
+---
 
 ## Demo
 
 ![NewsLens Demo](images/demo.png)
 
-Why did I use a hybrid approach?
-A headline and an article can use different words but still talk about the same thing.
-For example:
+The application provides an interactive dashboard showing:
 
-Headline: NASA scientists discover new evidence about Mars
+- Fake / Real prediction
+- Fake and Real probabilities
+- TF-IDF lexical similarity
+- Semantic similarity
+- Headline-body match
+- Discrepancy score
+- Clickbait score
+- Article statistics
+- Overall assessment
 
-The article might say:
-Researchers studying the Martian surface have found evidence suggesting that water existed on Mars in the past.
+---
 
-The exact words are different, but the meaning is related.Because of this, the project uses two types of similarity:
+## How It Works
 
-TF-IDF + Cosine Similarity → checks lexical/word-level similarity
-Sentence Transformers + Cosine Similarity → checks semantic/meaning-level similarity
-These are combined with a few additional article features and given to a Logistic Regression model.
+The system takes a **news headline and article body** as input and analyzes their relationship using multiple techniques.
 
-How the system works
+```text
+                  HEADLINE + ARTICLE BODY
+                            │
+                            ▼
+                      TEXT CLEANING
+                            │
+                            ▼
+                    FEATURE EXTRACTION
+                            │
+             ┌──────────────┴──────────────┐
+             │                             │
+             ▼                             ▼
+       TF-IDF SIMILARITY          SEMANTIC SIMILARITY
+       (Lexical Matching)         (Sentence Transformer)
+             │                             │
+             └──────────────┬──────────────┘
+                            │
+                            ▼
+                    ADDITIONAL FEATURES
+                            │
+                            ▼
+                     FEATURE SCALING
+                            │
+                            ▼
+                  LOGISTIC REGRESSION
+                            │
+                            ▼
+                     FAKE / REAL
+                            │
+                            │
+        ┌───────────────────┘
+        │
+        ▼
+   HEADLINE ANALYSIS
+        │
+        ▼
+  CLICKBAIT DETECTION
+        │
+        ▼
+  CLICKBAIT SCORE (0–100)
+        │
+        └──────────────┐
+                       ▼
+                 FINAL RESULTS
+                       │
+                       ▼
+                   NEWSLENS UI
+```
 
-Headline + Article Body
-          |
-          v
-     Text Cleaning
-          |
-     -----+-----
-     |         |
-     v         v
-   TF-IDF   Sentence
- Similarity Transformer
-     |         |
-     |         v
-     |    Semantic Similarity
-     |         |
-     +----+----+
-          |
-          v
-  Additional Features
-          |
-          v
-     7 ML Features
-          |
-          v
-   Feature Scaling
-          |
-          v
- Logistic Regression
-          |
-          v
-    Fake / Real
+### Two Main Analysis Paths
 
-At the same time, the headline is passed through a separate clickbait analyzer.
+**1. Hybrid ML Analysis**
 
-Features:
+The headline and article body are compared using:
 
-1. Fake / Real News Prediction
+- TF-IDF cosine similarity
+- Sentence Transformer semantic similarity
+- Headline and article length features
+- Question and exclamation mark counts
+- Headline-to-body length ratio
 
-The hybrid Logistic Regression model predicts:Fake or Real
+These features are scaled and passed to a **Logistic Regression classifier**.
+
+**2. Clickbait Analysis**
+
+The headline is separately analyzed for common clickbait patterns such as:
+
+- Sensational words
+- Curiosity-gap phrases
+- Excessive `!`
+- Excessive `?`
+- Excessive capitalization
+
+---
+
+## Features
+
+### 1. Fake / Real News Prediction
+
+The hybrid Logistic Regression model predicts whether the submitted article is:
+
+- **Fake**
+- **Real**
+
 The application also displays the model's probability for both classes.
 
-2. TF-IDF Similarity
+---
 
-TF-IDF is used to represent the headline and article body numerically.
-Cosine similarity is then used to measure how much their words overlap.
+### 2. TF-IDF Similarity
 
-3. Semantic Similarity
+TF-IDF (**Term Frequency–Inverse Document Frequency**) represents the headline and article body numerically.
 
-The project uses the all-MiniLM-L6-v2 Sentence Transformer model.
-This helps compare the meaning of the headline and article body, even when they don't use exactly the same words.
+Cosine similarity is then used to measure their **lexical overlap**.
 
-4. Headline–Body Match
+A higher score generally indicates that the headline and article body share more vocabulary.
 
-The TF-IDF similarity and semantic similarity are combined to calculate a headline-body match score.
-A corresponding discrepancy score is also shown.
-A high discrepancy means that the headline and article body should be reviewed more carefully.
+---
 
-5. Clickbait Detection
+### 3. Semantic Similarity
 
-The clickbait analyzer looks for things such as:
-Sensational words
-"You won't believe..." type phrases
-Excessive !, Excessive ? , Excessive capitalization
-Curiosity-gap wording
-It produces a score from 0 to 100.
+The project uses the **`all-MiniLM-L6-v2` Sentence Transformer** model.
 
-6. Article Statistics
+Unlike simple word matching, semantic similarity helps identify whether the headline and article body discuss similar ideas even when different words are used.
 
-The application also displays:
--Number of words in the headline
--Number of words in the article
--Headline/body length ratio
--Number of question marks
--Number of exclamation marks
+---
 
-Dataset
+### 4. Headline–Body Consistency
 
-The project uses the Fake and Real News Dataset containing separate fake and real news CSV files.
-Original dataset:
-Fake articles: 23,481
+The TF-IDF and semantic similarity scores are combined to produce a **headline-body match score**.
 
-Real articles: 21,417
+The application also displays a **discrepancy score**:
 
-Total: 44,898
-After removing duplicate articles: 39,105 articles
+```text
+Discrepancy = 100 - Headline-Body Match
+```
 
-The main columns used are:
-title
-text
-subject
-date
+A high discrepancy indicates that the headline and article body may need closer examination.
 
-For this project:
+---
 
-Fake news → label 0
+### 5. Clickbait Detection
 
-Real news → label 1
+The rule-based clickbait analyzer checks for:
 
-Model Performance
+- Sensational vocabulary
+- Curiosity-gap phrases
+- Excessive exclamation marks
+- Excessive question marks
+- Excessive capitalization
+
+The result is presented as a score from **0 to 100**.
+
+The application categorizes the result as:
+
+- **LOW CLICKBAIT**
+- **MODERATE CLICKBAIT**
+- **HIGH CLICKBAIT**
+
+---
+
+### 6. Article Statistics
+
+The dashboard also displays:
+
+- Number of words in the headline
+- Number of words in the article
+- Headline/body length ratio
+- Number of question marks
+- Number of exclamation marks
+
+These statistics provide additional context for the analysis.
+
+---
+
+## Dataset
+
+The project uses the **Fake and Real News Dataset**, containing separate CSV files for fake and real news articles.
+
+### Original Dataset
+
+| Category | Articles |
+|---|---:|
+| Fake | 23,481 |
+| Real | 21,417 |
+| **Total** | **44,898** |
+
+After removing duplicate headline + article combinations:
+
+**39,105 unique articles** were used.
+
+### Main Columns
+
+The dataset contains:
+
+- `title`
+- `text`
+- `subject`
+- `date`
+
+For model training:
+
+```text
+Fake News → Label 0
+Real News → Label 1
+```
+
+---
+
+## Model Performance
 
 The current hybrid model achieved approximately:
 
-84.02% accuracy
+### Accuracy
 
-Classification results:
-Class   Precision   Recall     F1-Score
-Fake      85%         79%        82%
-Real      83%         88%        86%
+**84.02%**
 
-The result is based on the dataset used for this project and should not be interpreted as proof that the system can determine the truth of every real-world news article.
+### Classification Report
 
-Technologies Used:
+| Class | Precision | Recall | F1-Score |
+|---|---:|---:|---:|
+| Fake | 85% | 79% | 82% |
+| Real | 83% | 88% | 86% |
 
--Python
--Pandas
--NumPy
--Scikit-learn
--Logistic Regression
--TF-IDF
--Cosine Similarity
--Sentence Transformers
--all-MiniLM-L6-v2
--Joblib
--Gradio
+The performance is based on the dataset used for this project.
 
-Project Structure:
+> A high test accuracy on this dataset does not mean the model can determine the factual truth of every real-world news article.
 
+---
+
+## Technologies Used
+
+### Programming
+
+- Python
+
+### Data Processing
+
+- Pandas
+- NumPy
+
+### Machine Learning
+
+- Scikit-learn
+- Logistic Regression
+- Feature Scaling
+
+### NLP
+
+- TF-IDF
+- Cosine Similarity
+- Sentence Transformers
+- `all-MiniLM-L6-v2`
+
+### Application
+
+- Gradio
+
+### Model Persistence
+
+- Joblib
+
+---
+
+## Project Structure
+
+```text
 Fake_news_detector/
 │
 ├── data/
@@ -171,104 +288,164 @@ Fake_news_detector/
 │   ├── hybrid_model.pkl
 │   └── tfidf_vectorizer.pkl
 │
+├── images/
+│   └── demo.png
+│
 ├── analyzer.py
 ├── app.py
 ├── clickbait.py
 ├── train_model.py
 ├── requirements.txt
-└── README.md
+├── README.md
+└── .gitignore
+```
 
-What the main files do
+---
 
-train_model.py
-Cleans the dataset, creates the features, trains the hybrid Logistic Regression model, evaluates it, and saves the trained components.
+## What the Main Files Do
 
-analyzer.py
+### `train_model.py`
+
+- Loads the fake and real news datasets
+- Cleans the text
+- Removes duplicate articles
+- Creates headline-body features
+- Calculates TF-IDF similarity
+- Calculates semantic similarity
+- Trains the Logistic Regression model
+- Evaluates the model
+- Saves the trained model components
+
+### `analyzer.py`
+
 Loads the saved models and analyzes a new headline and article body.
 
-clickbait.py
+It calculates:
+
+- Fake / Real probability
+- TF-IDF similarity
+- Semantic similarity
+- Headline-body match
+- Discrepancy
+- Article statistics
+
+### `clickbait.py`
+
 Contains the rule-based clickbait detection logic.
 
-app.py
-Creates the Gradio web interface and displays the analysis results.
+### `app.py`
 
-requirements.txt
-Contains the Python libraries needed to run the project.
+Creates the Gradio web interface and displays the analysis results in an interactive dashboard.
 
-Running the project locally
+### `requirements.txt`
 
-1. Clone the repository
+Contains the Python libraries required to run the project.
 
-git clone <your-repository-url>
+---
 
-2. Open the project folder
+## Running the Project Locally
 
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/mvshre-m27/Fake_news_detector.git
+```
+
+### 2. Open the project folder
+
+```bash
 cd Fake_news_detector
+```
 
-3. Install the required libraries
+### 3. Install the required libraries
 
+```bash
 pip install -r requirements.txt
+```
 
-4. Run the application
+### 4. Run the application
 
+```bash
 python app.py
+```
 
-Gradio will provide a local link in the terminal. Open that link in your browser.
+Gradio will provide a local link in the terminal.
 
-Example tests
+Open that link in your browser to use the application.
+
+---
+
+## Example Tests
 
 The application can be tested using different types of headlines.
 
-Normal news
+### Normal News
 
-A headline that accurately represents the article should generally show better headline-body consistency.
+A headline that accurately represents the article should generally show better headline-body consistency and lower discrepancy.
 
-Misleading headline
+### Misleading Headline
 
-A headline that talks about something that is not actually discussed in the article should produce a higher discrepancy score.
+A headline discussing something that is not actually supported by the article body should produce a higher discrepancy score.
 
-Clickbait headline
+### Clickbait Headline
 
-A headline such as:
+For example:
 
-"YOU WON'T BELIEVE WHAT HAPPENED NEXT!!!"
+```text
+YOU WON'T BELIEVE WHAT HAPPENED NEXT!!!
+```
 
-should trigger several clickbait indicators.
+This should trigger multiple clickbait indicators such as:
 
-Important limitation
+- Curiosity-gap wording
+- Sensational language
+- Excessive capitalization
+- Multiple exclamation marks
 
-This project is not a fact-checking system.
+---
 
-The Machine Learning model learns patterns from the training dataset. Therefore, a prediction such as "Likely Real" does not guarantee that the article is factually true.
+## Important Limitation
 
-Similarly, a high headline-body discrepancy does not automatically mean that the article itself is fake.
+This project is **not a fact-checking system**.
 
-The purpose of this project is to provide multiple analytical signals that can help a user examine a news article more carefully.
+The Machine Learning model learns statistical patterns from the training dataset. Therefore:
 
-Future Improvements
+> **"Likely Real" does not guarantee that an article is factually true.**
 
-Some improvements I would like to explore in the future are:
+Similarly:
 
-Real-time news scraping
+> **A high headline-body discrepancy does not automatically mean that an article is fake.**
 
-News source credibility analysis
+The project instead provides **multiple analytical signals** that can help a user examine a news article more carefully.
 
-Named Entity Recognition
+This distinction is important because fake-news detection and factual verification are different problems.
 
-Explainable AI for model predictions
+---
 
-Multilingual news detection
+## Future Improvements
 
-Transformer-based fake news classification
+Possible future improvements include:
 
-Fact-checking API integration
+- Real-time news scraping
+- News source credibility analysis
+- Named Entity Recognition
+- Explainable AI for model predictions
+- Multilingual news detection
+- Transformer-based fake news classification
+- Fact-checking API integration
+- Improved clickbait classification using machine learning
+- Comparison with additional news datasets
 
-Browser extension for analyzing headlines while browsing
+---
 
-Project Goal
+## Project Goal
 
-The main goal of this project was to build something that goes beyond a basic "Fake or Real" classifier.
+The goal of this project is to explore how **NLP and Machine Learning can be combined with headline-body consistency and clickbait analysis** to provide a more informative approach to news analysis.
 
-By combining Machine Learning, NLP, lexical similarity, semantic similarity, and clickbait analysis, the project tries to give a more useful picture of why a headline might deserve a closer look.
+Rather than giving users only a **Fake / Real** label, the system provides additional evidence such as similarity, discrepancy, clickbait indicators, and article statistics.
 
-Built as a Machine Learning and NLP project.
+---
+
+## Author
+
+Developed as an academic Machine Learning and NLP project.
